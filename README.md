@@ -4,7 +4,7 @@ Bu proje, **AIstrolog** projesinden günlük burç yorumlarını çeken ve Teleg
 
 ## Özellikler
 
-- **Günlük Burç Yorumları:** Her gün güncellenen burç yorumlarını takip edebilirsiniz.
+- **Günlük Burç Yorumları:** Her gün https://aistrolog.vercel.app/burclar sitesinin sağladığı verilerle güncellenen burç yorumlarını takip edebilirsiniz. Veri kaynağını inceleyebileceğiniz repo: https://github.com/kocerayk/AIstrolog
 - **Kategoriler:** Genel, Aşk, Para ve Sağlık kategorilerinde özel yorumlar.
 - **Günlük Bildirimler:** Her gün saat 12:00'de otomatik bildirim.
 - **Web Entegrasyonu:** AIstrolog web sitesine hızlı erişim.
