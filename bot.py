@@ -7,6 +7,8 @@ import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 import pymongo
+import asyncio
+from aiohttp import web
 
 # 1. AYARLAR
 TOKEN = "8330939722:AAE9dBVLBNpQClQ-OVlKk1hPYfTs6UhJsX4"
@@ -244,6 +246,7 @@ if __name__ == '__main__':
         print("Lütfen değişiklikleri commit edip pushlayın.")
         exit(1)
 
+    # Webhook Ayarları
     PORT = int(os.environ.get("PORT", "8443"))
     WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
@@ -251,10 +254,63 @@ if __name__ == '__main__':
         logging.error("WEBHOOK_URL ortam değişkeni tanımlanmamış! Webhook çalışmayabilir.")
         exit(1)
 
-    print(f"Bot webhook modunda başlatılıyor (Clean Version)... Port: {PORT}")
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
-    )
+    # --- CUSTOM WEBHOOK SERVER (AIOHTTP) ---
+    async def health_check(request):
+        """Cron-job ve Render health check için basit yanıt"""
+        return web.Response(text="Bot is running!", status=200)
+
+    async def telegram_webhook(request):
+        """Telegram'dan gelen güncellemeleri işle"""
+        try:
+            # Request body'sini al
+            json_data = await request.json()
+            update = Update.de_json(json_data, application.bot)
+            
+            # Update'i bot uygulamasına gönder
+            await application.process_update(update)
+            
+            return web.Response(text="OK", status=200)
+        except Exception as e:
+            logging.error(f"Webhook hatası: {e}")
+            return web.Response(text="Error", status=500)
+
+    async def main():
+        # 1. Botu Başlat
+        await application.initialize()
+        await application.start()
+        
+        # 2. Webhook'u Ayarla
+        webhook_path = f"/{TOKEN}"
+        full_webhook_url = f"{WEBHOOK_URL}{webhook_path}"
+        
+        print(f"Webhook ayarlanıyor: {full_webhook_url}")
+        await application.bot.set_webhook(url=full_webhook_url)
+
+        # 3. Web Sunucusunu Başlat (aiohttp)
+        app = web.Application()
+        
+        # Rotalar
+        app.router.add_get('/', health_check)          # Ana sayfa (Cron-job için)
+        app.router.add_post(webhook_path, telegram_webhook) # Telegram güncellemeleri için
+        
+        # Sunucuyu çalıştır
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", PORT)
+        
+        print(f"Web sunucusu başlatıldı. Port: {PORT}")
+        await site.start()
+
+        # Sonsuz döngü (Botun kapanmaması için)
+        stop_event = asyncio.Event()
+        await stop_event.wait()
+        
+        # Kapanış işlemleri (Gerekirse)
+        await application.stop()
+        await application.shutdown()
+
+    # Asenkron döngüyü başlat
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass # Elle durdurulursa hata verme
