@@ -1,14 +1,11 @@
 import logging
 import requests
-import logging
-import requests
 import json
 import os
 from datetime import datetime, time
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
-
 import pymongo
 
 # 1. AYARLAR
@@ -162,7 +159,7 @@ async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=ana_menu_klavyesi()
         )
         return
-
+    
     # 2. BURÇ SEÇİLDİ -> KATEGORİ GÖSTER (Format: menu_koc)
     if data.startswith('menu_'):
         burc_kod = data.split('_')[1] # 'koc'
@@ -192,6 +189,7 @@ async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             mesaj = (
                 f"🌟 **{burc_ismi} Burcu - {baslik_ikon} Yorumu** 🌟\n\n"
+                f"{yorum}\n"
                 f"{yorum}\n"
             )
         else:
@@ -254,7 +252,7 @@ if __name__ == '__main__':
         logging.error("WEBHOOK_URL ortam değişkeni tanımlanmamış! Webhook çalışmayabilir.")
         exit(1)
 
-    print(f"Bot webhook modunda başlatılıyor... Port: {PORT}")
+    print(f"Bot webhook modunda başlatılıyor (Clean Version)... Port: {PORT}")
     application.run_webhook(
         listen="0.0.0.0",
         port=PORT,
