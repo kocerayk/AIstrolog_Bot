@@ -69,7 +69,7 @@ def veri_cek():
 
 def abone_yonetimi(chat_id, islem='ekle'):
     """Abone ekleme ve çıkarma işlemleri (MongoDB)"""
-    if not subscribers_collection:
+    if subscribers_collection is None:
         logging.error("Veritabanı bağlantısı yok!")
         return False
 
@@ -205,7 +205,7 @@ async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- GÜNLÜK BİLDİRİM ---
 
 async def gunluk_bildirim_gorevi(context: ContextTypes.DEFAULT_TYPE):
-    if not subscribers_collection:
+    if subscribers_collection is None:
         return
 
     try:
