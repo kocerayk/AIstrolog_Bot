@@ -190,7 +190,6 @@ async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
             mesaj = (
                 f"🌟 **{burc_ismi} Burcu - {baslik_ikon} Yorumu** 🌟\n\n"
                 f"{yorum}\n"
-                f"{yorum}\n"
             )
         else:
             mesaj = "⚠️ Bugünün verileri henüz yüklenmemiş veya bir hata oluştu."
