@@ -1,15 +1,14 @@
 import logging
 import requests
+import logging
+import requests
 import json
 import os
 from datetime import datetime, time
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
-from telegram.error import Conflict
-from time import sleep
-from flask import Flask
-import threading
+
 import pymongo
 
 # 1. AYARLAR
@@ -227,23 +226,20 @@ async def gunluk_bildirim_gorevi(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Veritabanı okuma hatası: {e}")
 
-# --- FLASK SERVER (Render İçin) ---
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is alive!"
-
-def run_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
 if __name__ == '__main__':
-    # Flask sunucusunu ayrı bir thread'de başlat
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-
+    application = ApplicationBuilder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('stop', stop)) 
+    application.add_handler(CallbackQueryHandler(buton_tiklama))
+    
+    # Zamanlayıcı
+    job_queue = application.job_queue
+    turkey_tz = pytz.timezone("Europe/Istanbul")
+    target_time = time(hour=12, minute=0, second=0, tzinfo=turkey_tz)
+    
+    job_queue.run_daily(gunluk_bildirim_gorevi, time=target_time)
+    
     # Sadece Render üzerinde çalışmasına izin ver (Çakışmaları önlemek için)
     if not os.environ.get("RENDER"):
         print("⚠️ BU BOT SADECE RENDER ÜZERİNDE ÇALIŞMAK ÜZERE AYARLANMIŞTIR.")
@@ -251,34 +247,17 @@ if __name__ == '__main__':
         print("Lütfen değişiklikleri commit edip pushlayın.")
         exit(1)
 
-    print("Bot çalışıyor... (Render Modu)")
-    
-    # Conflict Hatası için Retry Mekanizması
-    while True:
-        try:
-            # Application her seferinde yeniden oluşturulmalı
-            application = ApplicationBuilder().token(TOKEN).build()
-            
-            application.add_handler(CommandHandler('start', start))
-            application.add_handler(CommandHandler('stop', stop)) 
-            application.add_handler(CallbackQueryHandler(buton_tiklama))
-            
-            # Zamanlayıcı
-            job_queue = application.job_queue
-            turkey_tz = pytz.timezone("Europe/Istanbul")
-            target_time = time(hour=12, minute=0, second=0, tzinfo=turkey_tz)
-            
-            job_queue.run_daily(gunluk_bildirim_gorevi, time=target_time)
-            
-            print("Polling başlatılıyor...")
-            application.run_polling()
-            
-        except Conflict:
-            print("⚠️ Conflict hatası algılandı (Başka bir instance çalışıyor).")
-            print("5 saniye bekleniyor ve tekrar deneniyor...")
-            sleep(5)
-            continue
-        except Exception as e:
-            logging.error(f"Beklenmeyen hata: {e}")
-            print("10 saniye sonra tekrar denenecek...")
-            sleep(10)
+    PORT = int(os.environ.get("PORT", "8443"))
+    WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+
+    if not WEBHOOK_URL:
+        logging.error("WEBHOOK_URL ortam değişkeni tanımlanmamış! Webhook çalışmayabilir.")
+        exit(1)
+
+    print(f"Bot webhook modunda başlatılıyor... Port: {PORT}")
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}"
+    )
