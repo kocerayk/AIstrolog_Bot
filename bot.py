@@ -4,37 +4,30 @@ import json
 import os
 from datetime import datetime, time
 import pytz
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
+import pymongo
+import asyncio
+from aiohttp import web
+
+# 1. AYARLAR
+TOKEN = "8330939722:AAE9dBVLBNpQClQ-OVlKk1hPYfTs6UhJsX4"
+GITHUB_BASE_URL = "https://raw.githubusercontent.com/kocerayk/AIstrolog/main/frontend/public/data/summarized_processed_daily_raw_"
+
+# MongoDB Ayarları
+# Render'da Environment Variable olarak tanımlanmalı: MONGO_URI
+MONGO_URI = os.environ.get("MONGO_URI")
 
 # Eğer MONGO_URI yoksa (lokal test için) uyarı ver veya varsayılan kullan (dikkatli olunmalı)
 if not MONGO_URI:
     logging.warning("MONGO_URI bulunamadı! Veritabanı işlemleri çalışmayabilir.")
-else:
-    # Olası tırnak işaretlerini ve boşlukları temizle
-    MONGO_URI = MONGO_URI.strip().strip("'").strip('"')
-
-def check_db_connection():
-    """Veritabanı bağlantısını test et"""
-    if client is None:
-        return False, "Client başlatılamadı."
-    try:
-        client.admin.command('ping')
-        return True, "Bağlantı başarılı."
-    except Exception as e:
-        return False, str(e)
 
 try:
     client = pymongo.MongoClient(MONGO_URI)
-    # Bağlantıyı hemen test et
-    is_connected, error_msg = check_db_connection()
-    if is_connected:
-        logging.info("MongoDB bağlantısı başarılı!")
-    else:
-        logging.error(f"MongoDB bağlantı hatası (Başlangıç): {error_msg}")
-        
     db = client["aistrolog_db"]
     subscribers_collection = db["subscribers"]
 except Exception as e:
-    logging.error(f"MongoDB başlatma hatası: {e}")
+    logging.error(f"MongoDB bağlantı hatası: {e}")
     client = None
     subscribers_collection = None
 
@@ -155,14 +148,6 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Zaten abone değilsin.")
 
-async def test_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Veritabanı bağlantısını manuel test et"""
-    is_connected, msg = check_db_connection()
-    if is_connected:
-        await update.message.reply_text(f"✅ {msg}")
-    else:
-        await update.message.reply_text(f"❌ {msg}")
-
 async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -245,7 +230,6 @@ if __name__ == '__main__':
     
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('stop', stop)) 
-    application.add_handler(CommandHandler('test_db', test_db))
     application.add_handler(CallbackQueryHandler(buton_tiklama))
     
     # Zamanlayıcı
