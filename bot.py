@@ -5,6 +5,7 @@ import os
 from datetime import datetime, time
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 import pymongo
 import asyncio
@@ -150,7 +151,11 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try:
+        await query.answer()
+    except BadRequest:
+        # "Query is too old" hatasını yoksay (Render spin-down yüzünden olabilir)
+        pass
     
     data = query.data # Örn: 'ana_menu', 'menu_koc', 'oku_koc_ask'
     
