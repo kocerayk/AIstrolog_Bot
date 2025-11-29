@@ -159,53 +159,59 @@ async def buton_tiklama(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     data = query.data # Örn: 'ana_menu', 'menu_koc', 'oku_koc_ask'
     
-    # 1. ANA MENÜYE DÖNÜŞ
-    if data == 'ana_menu':
-        await query.edit_message_text(
-            text="Günlük Burç Özetini görüntülemek için burcunu seç:",
-            reply_markup=ana_menu_klavyesi()
-        )
-        return
-    
-    # 2. BURÇ SEÇİLDİ -> KATEGORİ GÖSTER (Format: menu_koc)
-    if data.startswith('menu_'):
-        burc_kod = data.split('_')[1] # 'koc'
-        burc_ismi = BURC_MAP.get(burc_kod)
-        
-        await query.edit_message_text(
-            text=f"Sevgili {burc_ismi}, hangi yorumu okumak istersin?",
-            reply_markup=kategori_klavyesi(burc_kod),
-            parse_mode='Markdown'
-        )
-        return
-
-    # 3. KATEGORİ SEÇİLDİ -> YORUM OKU (Format: oku_koc_ask)
-    if data.startswith('oku_'):
-        _, burc_kod, kategori = data.split('_') 
-        burc_ismi = BURC_MAP.get(burc_kod)
-        
-        await query.edit_message_text(text=f"🔮 {burc_ismi} burcu için veriler çekiliyor...")
-        
-        veriler = veri_cek()
-        
-        if veriler and burc_ismi in veriler:
-            # JSON'dan veriyi al
-            yorum = veriler[burc_ismi].get(kategori, "Bu kategori için veri bulunamadı.")
-            
-            baslik_ikon = KATEGORI_MAP.get(kategori, kategori.capitalize())
-            
-            mesaj = (
-                f"🌟 **{burc_ismi} Burcu - {baslik_ikon} Yorumu** 🌟\n\n"
-                f"{yorum}\n"
+    try:
+        # 1. ANA MENÜYE DÖNÜŞ
+        if data == 'ana_menu':
+            await query.edit_message_text(
+                text="Günlük Burç Özetini görüntülemek için burcunu seç:",
+                reply_markup=ana_menu_klavyesi()
             )
-        else:
-            mesaj = "⚠️ Bugünün verileri henüz yüklenmemiş veya bir hata oluştu."
+            return
+        
+        # 2. BURÇ SEÇİLDİ -> KATEGORİ GÖSTER (Format: menu_koc)
+        if data.startswith('menu_'):
+            burc_kod = data.split('_')[1] # 'koc'
+            burc_ismi = BURC_MAP.get(burc_kod)
+            
+            await query.edit_message_text(
+                text=f"Sevgili {burc_ismi}, hangi yorumu okumak istersin?",
+                reply_markup=kategori_klavyesi(burc_kod),
+                parse_mode='Markdown'
+            )
+            return
 
-        await query.edit_message_text(
-            text=mesaj,
-            reply_markup=geri_donus_klavyesi(burc_kod),
-            parse_mode='Markdown'
-        )
+        # 3. KATEGORİ SEÇİLDİ -> YORUM OKU (Format: oku_koc_ask)
+        if data.startswith('oku_'):
+            _, burc_kod, kategori = data.split('_') 
+            burc_ismi = BURC_MAP.get(burc_kod)
+            
+            await query.edit_message_text(text=f"🔮 {burc_ismi} burcu için veriler çekiliyor...")
+            
+            veriler = veri_cek()
+            
+            if veriler and burc_ismi in veriler:
+                # JSON'dan veriyi al
+                yorum = veriler[burc_ismi].get(kategori, "Bu kategori için veri bulunamadı.")
+                
+                baslik_ikon = KATEGORI_MAP.get(kategori, kategori.capitalize())
+                
+                mesaj = (
+                    f"🌟 **{burc_ismi} Burcu - {baslik_ikon} Yorumu** 🌟\n\n"
+                    f"{yorum}\n"
+                )
+            else:
+                mesaj = "⚠️ Bugünün verileri henüz yüklenmemiş veya bir hata oluştu."
+
+            await query.edit_message_text(
+                text=mesaj,
+                reply_markup=geri_donus_klavyesi(burc_kod),
+                parse_mode='Markdown'
+            )
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            raise e
 
 # --- GÜNLÜK BİLDİRİM ---
 
